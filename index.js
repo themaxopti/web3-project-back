@@ -5,8 +5,9 @@ const { expressMiddleware } = require('@apollo/server/express4')
 const { ApolloServerPluginDrainHttpServer } = require('@apollo/server/plugin/drainHttpServer')
 const { ApolloServer } = require('@apollo/server');
 const http = require('http');
-const cors = require('cors')
-
+const cors = require('cors');
+const { userTypeDefs, userResolvers } = require('./src/modules/user/user.controller');
+const bodyParser = require('body-parser')
 const app = express()
 const httpServer = http.createServer(app);
 const port = 3000
@@ -28,7 +29,6 @@ async function startServer() {
     const resolvers = {
         Query: {
             hello: (parent, args) => {
-                console.log(parent, args);
                 return exmp.find(el => el == args.value)
             },
             good: (parent, args) => {
@@ -43,24 +43,20 @@ async function startServer() {
     };
 
     const apolloServer = new ApolloServer({
-        typeDefs,
-        resolvers,
+        typeDefs: userTypeDefs,
+        resolvers: userResolvers,
         plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
     });
     await apolloServer.start()
 
+    const context = (ctx) => ctx;
     app.use(
-        express.json(),
+        bodyParser.json(),
         cors({ origin: 'http://localhost:3001' }),
-        expressMiddleware(apolloServer)
+        expressMiddleware(apolloServer, { context })
     )
 
-    // // parse application/x-www-form-urlencoded
-    // app.use(express.urlencoded({ extended: false }))
-
     mongoDbService.initDataBase()
-
-    // app.use('/graphql', createHandler({ schema, }))
 
     httpServer.listen(port, () => {
         console.log(`Server has been started on port ${port}`)
